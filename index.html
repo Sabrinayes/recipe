@@ -93,10 +93,23 @@
             background-color: #e0f7fa;
             border-radius: 5px;
         }
+
+        #id-input-container {
+            margin-bottom: 20px;
+        }
+
+        #id-input-container input {
+            width: 200px;
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
     <div id="app">
+        <div id="id-input-container">
+            <input type="text" id="user-id" placeholder="请输入ID">
+            <button onclick="setUserId()">确认</button>
+        </div>
         <div id="tabs">
             <button onclick="showTab('input')">录入</button>
             <button onclick="showTab('generate')">生成</button>
@@ -163,20 +176,38 @@
             dishes: []
         };
 
+        let currentUserId = null; // 当前用户ID
+
+        // 设置用户ID
+        function setUserId() {
+            const userId = document.getElementById('user-id').value;
+            if (!userId) {
+                alert('请输入ID');
+                return;
+            }
+            currentUserId = userId;
+            loadData(); // 加载对应ID的数据
+            document.getElementById('id-input-container').style.display = 'none'; // 隐藏ID输入框
+            showTab('input'); // 显示录入界面
+        }
+
         // 加载本地存储的数据
         function loadData() {
-            const data = localStorage.getItem('userData');
+            if (!currentUserId) return;
+            const data = localStorage.getItem(`userData_${currentUserId}`);
             if (data) {
                 userData = JSON.parse(data);
+            } else {
+                userData = { vegetables: [], meats: [], dishes: [] }; // 初始化新用户数据
             }
             updateSelectOptions();
             updateViewTab(); // 更新查看界面
-            showTab('input'); // 默认显示录入界面
         }
 
         // 保存数据到本地存储
         function saveData() {
-            localStorage.setItem('userData', JSON.stringify(userData));
+            if (!currentUserId) return;
+            localStorage.setItem(`userData_${currentUserId}`, JSON.stringify(userData));
         }
 
         // 显示指定标签页
@@ -358,7 +389,8 @@
 
         // 页面加载时初始化
         window.onload = function () {
-            loadData();
+            document.getElementById('id-input-container').style.display = 'block'; // 显示ID输入框
+            document.querySelectorAll('.tab').forEach(tab => tab.style.display = 'none'); // 隐藏所有标签页
         };
     </script>
 </body>
