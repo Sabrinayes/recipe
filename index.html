@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>菜品生成器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        #app {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab {
+            display: none;
+        }
+
+        button {
+            background-color: #ff7f50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #ff6347;
+        }
+
+        input, select {
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 100%;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #e0f7fa;
+            border-radius: 5px;
+        }
+
+        .item-list {
+            margin-top: 10px;
+        }
+
+        .item-list .item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 5px;
+            padding: 10px;
+            background-color: #e0f7fa;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .item-list .item:hover {
+            background-color: #b2ebf2;
+        }
+
+        .delete-button {
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: none; /* 默认隐藏 */
+        }
+
+        .delete-button:hover {
+            background-color: #cc0000;
+        }
+
+        .dish-info {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #e0f7fa;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="tabs">
+            <button onclick="showTab('input')">录入</button>
+            <button onclick="showTab('generate')">生成</button>
+            <button onclick="showTab('view')">查看</button>
+        </div>
+        <div id="input-tab" class="tab">
+            <h2>录入原材料</h2>
+            <div>
+                <h3>菜</h3>
+                <input type="text" id="vegetable-input" placeholder="输入菜名，用逗号分隔">
+                <button onclick="addVegetables()">添加</button>
+            </div>
+            <div>
+                <h3>肉</h3>
+                <input type="text" id="meat-input" placeholder="输入肉名，用逗号分隔">
+                <button onclick="addMeats()">添加</button>
+            </div>
+            <h2>录入菜品</h2>
+            <div>
+                <input type="text" id="dish-name" placeholder="菜品名称">
+                <input type="text" id="dish-ingredients" placeholder="所需原材料，用逗号分隔">
+                <button onclick="addDish()">添加</button>
+            </div>
+        </div>
+        <div id="generate-tab" class="tab">
+            <h2>生成菜品</h2>
+            <div>
+                <h3>菜</h3>
+                <select id="vegetable-select">
+                    <option value="none">不要</option>
+                    <option value="random">随机</option>
+                </select>
+            </div>
+            <div>
+                <h3>肉</h3>
+                <select id="meat-select">
+                    <option value="none">不要</option>
+                    <option value="random">随机</option>
+                </select>
+            </div>
+            <button onclick="generateDish()">生成菜品</button>
+            <div id="result"></div>
+        </div>
+        <div id="view-tab" class="tab">
+            <h2>查看原材料和菜品</h2>
+            <div>
+                <h3>菜</h3>
+                <div class="item-list" id="vegetable-list"></div>
+            </div>
+            <div>
+                <h3>肉</h3>
+                <div class="item-list" id="meat-list"></div>
+            </div>
+            <div>
+                <h3>菜品</h3>
+                <div class="item-list" id="dish-list"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        let userData = {
+            vegetables: [],
+            meats: [],
+            dishes: []
+        };
+
+        // 加载本地存储的数据
+        function loadData() {
+            const data = localStorage.getItem('userData');
+            if (data) {
+                userData = JSON.parse(data);
+            }
+            updateSelectOptions();
+            updateViewTab(); // 更新查看界面
+            showTab('input'); // 默认显示录入界面
+        }
+
+        // 保存数据到本地存储
+        function saveData() {
+            localStorage.setItem('userData', JSON.stringify(userData));
+        }
+
+        // 显示指定标签页
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.style.display = 'none');
+            document.getElementById(`${tabName}-tab`).style.display = 'block';
+            if (tabName === 'view') {
+                updateViewTab(); // 切换到查看界面时更新内容
+            }
+        }
+
+        // 添加菜
+        function addVegetables() {
+            const input = document.getElementById('vegetable-input').value;
+            if (!input) {
+                alert('请输入菜名');
+                return;
+            }
+            const vegetables = input.split('，');
+            userData.vegetables = [...new Set([...userData.vegetables, ...vegetables])];
+            saveData();
+            updateSelectOptions();
+            updateViewTab(); // 更新查看界面
+            document.getElementById('vegetable-input').value = ''; // 清空输入框
+        }
+
+        // 添加肉
+        function addMeats() {
+            const input = document.getElementById('meat-input').value;
+            if (!input) {
+                alert('请输入肉名');
+                return;
+            }
+            const meats = input.split('，');
+            userData.meats = [...new Set([...userData.meats, ...meats])];
+            saveData();
+            updateSelectOptions();
+            updateViewTab(); // 更新查看界面
+            document.getElementById('meat-input').value = ''; // 清空输入框
+        }
+
+        // 添加菜品
+        function addDish() {
+            const name = document.getElementById('dish-name').value;
+            const ingredients = document.getElementById('dish-ingredients').value.split('，');
+            if (!name || !ingredients) {
+                alert('请输入菜品名称和所需原材料');
+                return;
+            }
+            userData.dishes.push({ name, ingredients });
+            saveData();
+            updateViewTab(); // 更新查看界面
+            document.getElementById('dish-name').value = ''; // 清空输入框
+            document.getElementById('dish-ingredients').value = ''; // 清空输入框
+        }
+
+        // 更新选择框选项
+        function updateSelectOptions() {
+            const vegetableSelect = document.getElementById('vegetable-select');
+            const meatSelect = document.getElementById('meat-select');
+            vegetableSelect.innerHTML = '<option value="none">不要</option><option value="random">随机</option>';
+            meatSelect.innerHTML = '<option value="none">不要</option><option value="random">随机</option>';
+            userData.vegetables.forEach(veg => {
+                vegetableSelect.innerHTML += `<option value="${veg}">${veg}</option>`;
+            });
+            userData.meats.forEach(meat => {
+                meatSelect.innerHTML += `<option value="${meat}">${meat}</option>`;
+            });
+        }
+
+        // 生成菜品
+        function generateDish() {
+            const vegetable = document.getElementById('vegetable-select').value;
+            const meat = document.getElementById('meat-select').value;
+            let filteredDishes = userData.dishes.filter(dish => {
+                // 检查蔬菜条件
+                const hasVegetable = vegetable === 'none' ? true : vegetable === 'random' ? dish.ingredients.some(ing => userData.vegetables.includes(ing)) : dish.ingredients.includes(vegetable);
+                // 检查肉类条件
+                const hasMeat = meat === 'none' ? true : meat === 'random' ? dish.ingredients.some(ing => userData.meats.includes(ing)) : dish.ingredients.includes(meat);
+                // 如果蔬菜选择“不要”，则菜品不能包含任何蔬菜
+                const noVegetable = vegetable === 'none' ? !dish.ingredients.some(ing => userData.vegetables.includes(ing)) : true;
+                // 如果肉类选择“不要”，则菜品不能包含任何肉类
+                const noMeat = meat === 'none' ? !dish.ingredients.some(ing => userData.meats.includes(ing)) : true;
+                return hasVegetable && hasMeat && noVegetable && noMeat;
+            });
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = ''; // 清空结果
+            if (filteredDishes.length === 0) {
+                resultDiv.innerHTML = '没有符合条件的菜品';
+            } else {
+                const randomDish = filteredDishes[Math.floor(Math.random() * filteredDishes.length)];
+                resultDiv.innerHTML = `<p>${randomDish.name}</p>`;
+                if (filteredDishes.length > 1) {
+                    resultDiv.innerHTML += '<button onclick="showAllDishes()">展开</button>';
+                    resultDiv.innerHTML += '<div id="all-dishes" style="display:none;">'; // 默认隐藏
+                    filteredDishes.forEach(dish => {
+                        resultDiv.innerHTML += `<p>${dish.name}</p>`;
+                    });
+                    resultDiv.innerHTML += '</div>';
+                }
+            }
+        }
+
+        // 显示所有菜品
+        function showAllDishes() {
+            document.getElementById('all-dishes').style.display = 'block'; // 点击后显示
+        }
+
+        // 更新查看界面
+        function updateViewTab() {
+            const vegetableList = document.getElementById('vegetable-list');
+            const meatList = document.getElementById('meat-list');
+            const dishList = document.getElementById('dish-list');
+            vegetableList.innerHTML = '';
+            meatList.innerHTML = '';
+            dishList.innerHTML = '';
+
+            // 显示蔬菜
+            userData.vegetables.forEach(veg => {
+                const item = document.createElement('div');
+                item.className = 'item';
+                item.innerHTML = `
+                    <span>${veg}</span>
+                    <button class="delete-button" onclick="deleteItem('vegetables', '${veg}')">删除</button>
+                `;
+                item.addEventListener('click', () => {
+                    item.querySelector('.delete-button').style.display = 'inline-block';
+                });
+                vegetableList.appendChild(item);
+            });
+
+            // 显示肉类
+            userData.meats.forEach(meat => {
+                const item = document.createElement('div');
+                item.className = 'item';
+                item.innerHTML = `
+                    <span>${meat}</span>
+                    <button class="delete-button" onclick="deleteItem('meats', '${meat}')">删除</button>
+                `;
+                item.addEventListener('click', () => {
+                    item.querySelector('.delete-button').style.display = 'inline-block';
+                });
+                meatList.appendChild(item);
+            });
+
+            // 显示菜品
+            userData.dishes.forEach((dish, index) => {
+                const item = document.createElement('div');
+                item.className = 'item';
+                item.innerHTML = `
+                    <span>${dish.name}（${dish.ingredients.join('，')}）</span>
+                    <button class="delete-button" onclick="deleteDish(${index})">删除</button>
+                `;
+                item.addEventListener('click', () => {
+                    item.querySelector('.delete-button').style.display = 'inline-block';
+                });
+                dishList.appendChild(item);
+            });
+        }
+
+        // 删除蔬菜或肉类
+        function deleteItem(type, item) {
+            if (type === 'vegetables') {
+                userData.vegetables = userData.vegetables.filter(veg => veg !== item);
+            } else if (type === 'meats') {
+                userData.meats = userData.meats.filter(meat => meat !== item);
+            }
+            saveData();
+            updateSelectOptions();
+            updateViewTab(); // 更新查看界面
+        }
+
+        // 删除菜品
+        function deleteDish(index) {
+            userData.dishes.splice(index, 1);
+            saveData();
+            updateViewTab(); // 更新查看界面
+        }
+
+        // 页面加载时初始化
+        window.onload = function () {
+            loadData();
+        };
+    </script>
+</body>
+</html>
