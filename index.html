@@ -94,21 +94,25 @@
             border-radius: 5px;
         }
 
-        #id-input-container {
+        #id-input-section {
             margin-bottom: 20px;
         }
 
-        #id-input-container input {
-            width: 200px;
-            margin-right: 10px;
+        #tabs {
+            display: none; /* 默认隐藏 */
+        }
+
+        .hidden-dish {
+            display: none; /* 默认隐藏 */
         }
     </style>
 </head>
 <body>
     <div id="app">
-        <div id="id-input-container">
-            <input type="text" id="user-id" placeholder="请输入ID">
-            <button onclick="setUserId()">确认</button>
+        <div id="id-input-section">
+            <h2>请输入ID</h2>
+            <input type="text" id="user-id" placeholder="输入ID">
+            <button onclick="checkUserId()">确认</button>
         </div>
         <div id="tabs">
             <button onclick="showTab('input')">录入</button>
@@ -176,38 +180,20 @@
             dishes: []
         };
 
-        let currentUserId = null; // 当前用户ID
-
-        // 设置用户ID
-        function setUserId() {
-            const userId = document.getElementById('user-id').value;
-            if (!userId) {
-                alert('请输入ID');
-                return;
-            }
-            currentUserId = userId;
-            loadData(); // 加载对应ID的数据
-            document.getElementById('id-input-container').style.display = 'none'; // 隐藏ID输入框
-            showTab('input'); // 显示录入界面
-        }
-
         // 加载本地存储的数据
         function loadData() {
-            if (!currentUserId) return;
-            const data = localStorage.getItem(`userData_${currentUserId}`);
+            const data = localStorage.getItem('userData');
             if (data) {
                 userData = JSON.parse(data);
-            } else {
-                userData = { vegetables: [], meats: [], dishes: [] }; // 初始化新用户数据
             }
             updateSelectOptions();
             updateViewTab(); // 更新查看界面
+            showTab('input'); // 默认显示录入界面
         }
 
         // 保存数据到本地存储
         function saveData() {
-            if (!currentUserId) return;
-            localStorage.setItem(`userData_${currentUserId}`, JSON.stringify(userData));
+            localStorage.setItem('userData', JSON.stringify(userData));
         }
 
         // 显示指定标签页
@@ -297,23 +283,31 @@
             resultDiv.innerHTML = ''; // 清空结果
             if (filteredDishes.length === 0) {
                 resultDiv.innerHTML = '没有符合条件的菜品';
+            } else if (filteredDishes.length === 1) {
+                // 如果只有一个菜品，直接显示
+                resultDiv.innerHTML = `<p>${filteredDishes[0].name}</p>`;
             } else {
-                const randomDish = filteredDishes[Math.floor(Math.random() * filteredDishes.length)];
+                // 如果多于一个菜品，随机显示一个，其他隐藏
+                const randomIndex = Math.floor(Math.random() * filteredDishes.length);
+                const randomDish = filteredDishes[randomIndex];
                 resultDiv.innerHTML = `<p>${randomDish.name}</p>`;
-                if (filteredDishes.length > 1) {
-                    resultDiv.innerHTML += '<button onclick="showAllDishes()">展开</button>';
-                    resultDiv.innerHTML += '<div id="all-dishes" style="display:none;">'; // 默认隐藏
-                    filteredDishes.forEach(dish => {
-                        resultDiv.innerHTML += `<p>${dish.name}</p>`;
-                    });
-                    resultDiv.innerHTML += '</div>';
-                }
+                // 隐藏其他菜品
+                filteredDishes.forEach((dish, index) => {
+                    if (index !== randomIndex) {
+                        resultDiv.innerHTML += `<p class="hidden-dish">${dish.name}</p>`;
+                    }
+                });
+                // 显示“展开”按钮
+                resultDiv.innerHTML += '<button onclick="showAllDishes()">展开</button>';
             }
         }
 
         // 显示所有菜品
         function showAllDishes() {
-            document.getElementById('all-dishes').style.display = 'block'; // 点击后显示
+            const hiddenDishes = document.querySelectorAll('#result .hidden-dish');
+            hiddenDishes.forEach(dish => {
+                dish.style.display = 'block'; // 显示隐藏的菜品
+            });
         }
 
         // 更新查看界面
@@ -387,10 +381,21 @@
             updateViewTab(); // 更新查看界面
         }
 
+        // 检查用户ID
+        function checkUserId() {
+            const userId = document.getElementById('user-id').value;
+            if (userId) {
+                document.getElementById('id-input-section').style.display = 'none'; // 隐藏ID输入部分
+                document.getElementById('tabs').style.display = 'block'; // 显示按钮
+                loadData(); // 加载数据
+            } else {
+                alert('请输入ID');
+            }
+        }
+
         // 页面加载时初始化
         window.onload = function () {
-            document.getElementById('id-input-container').style.display = 'block'; // 显示ID输入框
-            document.querySelectorAll('.tab').forEach(tab => tab.style.display = 'none'); // 隐藏所有标签页
+            document.getElementById('tabs').style.display = 'none'; // 默认隐藏按钮
         };
     </script>
 </body>
